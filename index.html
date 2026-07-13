@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tirage — question du jour</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="wrap">
+  <div class="eyebrow">Tirage du jour</div>
+  <h1 class="brandline">Ton <span>quotidien</span> en question</h1>
+
+  <div class="ticket">
+    <div class="stub-label">Question du jour</div>
+    <div class="stage" id="stage">
+      <p class="placeholder" id="stageText">Appuie sur « tirer une question » pour démarrer.</p>
+    </div>
+
+    <div class="answer-zone" id="answerZone">
+      <div class="timer-wrap">
+        <div class="timer-track"><div class="timer-fill" id="timerFill"></div></div>
+        <div class="timer-num" id="timerNum">15s</div>
+      </div>
+      <label for="answerInput">Ta réponse, en toute anonymité</label>
+      <div class="answer-row">
+        <input id="answerInput" type="text" maxlength="80" placeholder="Écris ta réponse ici...">
+        <button id="sendBtn">Envoyer</button>
+      </div>
+      <div class="anon-note">Aucun nom, aucune donnée personnelle n'est enregistrée — seule ta réponse est comparée aux autres.</div>
+      <div class="match-result" id="matchResult"></div>
+    </div>
+
+    <div class="perforation"></div>
+    <div class="cta-row">
+      <button class="draw" id="drawBtn">Tirer une question</button>
+    </div>
+    <div class="footer">
+      <div class="ticket-no" id="ticketNo">N° ————</div>
+      <div class="qr-box" id="qrBox"></div>
+    </div>
+  </div>
+
+  <p class="hint">Scanne ce code pour rejouer et tirer une nouvelle question à tout moment.</p>
+</div>
+
+<!-- Librairies externes -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<!-- Fichiers du site, dans cet ordre précis -->
+<script src="config.js"></script>
+<script src="questions.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
