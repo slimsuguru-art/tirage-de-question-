@@ -53,6 +53,57 @@
   var countdownInterval = null;
   var countdownExpireTimeout = null;
 
+  // ---------- Compteur global en temps réel ----------
+  var globalCountEl = document.getElementById('globalCount');
+  var displayedCount = null;
+
+  function formatNumber(n){
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
+  function animateCounterTo(target){
+    if(displayedCount === null){
+      displayedCount = target;
+      globalCountEl.textContent = formatNumber(target);
+      return;
+    }
+    if(target === displayedCount) return;
+
+    var start = displayedCount;
+    var startTime = null;
+    var duration = 600;
+
+    function step(ts){
+      if(startTime === null) startTime = ts;
+      var progress = Math.min((ts - startTime) / duration, 1);
+      var value = Math.round(start + (target - start) * progress);
+      globalCountEl.textContent = formatNumber(value);
+      if(progress < 1){
+        requestAnimationFrame(step);
+      } else {
+        displayedCount = target;
+        globalCountEl.classList.add('bump');
+        setTimeout(function(){ globalCountEl.classList.remove('bump'); }, 400);
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  if(firebaseReady){
+    try{
+      db.collection('stats').doc('global').onSnapshot(function(doc){
+        var total = (doc.exists && typeof doc.data().totalAnswers === 'number') ? doc.data().totalAnswers : 0;
+        animateCounterTo(total);
+      }, function(){
+        globalCountEl.textContent = '—';
+      });
+    }catch(e){
+      globalCountEl.textContent = '—';
+    }
+  } else {
+    globalCountEl.textContent = '—';
+  }
+
   function escapeHtml(s){
     var d = document.createElement('div');
     d.textContent = s;
@@ -223,6 +274,10 @@
         answer: raw.slice(0, 80),
         ts: firebase.firestore.FieldValue.serverTimestamp()
       });
+
+      db.collection('stats').doc('global').set({
+        totalAnswers: firebase.firestore.FieldValue.increment(1)
+      }, { merge: true }).catch(function(){});
 
       currentAnswerText = raw.slice(0, 80);
 
