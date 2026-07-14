@@ -50,6 +50,28 @@ body{
 }
 .brandline span{color:var(--marigold);}
 
+.global-counter{
+  text-align:center;
+  font-size:12px;
+  color:var(--ink-dim);
+  margin:-16px 0 24px;
+  letter-spacing:.02em;
+}
+.global-counter-num{
+  font-family:'IBM Plex Mono', monospace;
+  font-weight:600;
+  color:var(--marigold);
+  font-size:13px;
+}
+.global-counter-num.bump{
+  animation: counterBump .4s ease-out;
+}
+@keyframes counterBump{
+  0%{ transform:scale(1); }
+  40%{ transform:scale(1.25); color:var(--coral); }
+  100%{ transform:scale(1); }
+}
+
 .ticket{
   position:relative;
   background:var(--card);
