@@ -72,6 +72,113 @@ body{
   100%{ transform:scale(1); }
 }
 
+.mood-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  justify-content:center;
+  margin-bottom:20px;
+}
+.mood-chip{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px;
+  letter-spacing:.03em;
+  background:var(--card);
+  color:var(--ink-dim);
+  border:1px solid var(--card-edge);
+  border-radius:999px;
+  padding:7px 14px;
+  cursor:pointer;
+  transition:background .15s ease, color .15s ease, border-color .15s ease;
+  white-space:nowrap;
+}
+.mood-chip:hover{border-color:var(--marigold-dim);}
+.mood-chip.active{
+  background:var(--marigold);
+  color:#3A2603;
+  border-color:var(--marigold);
+}
+
+.stub-label .mood-tag{
+  color:var(--ink-dim);
+  font-weight:400;
+}
+
+/* Sélecteur d'ambiance */
+.cat-selector{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:8px;
+  margin-bottom:18px;
+}
+.cat-chip{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px;
+  letter-spacing:.03em;
+  background:var(--card);
+  color:var(--ink-dim);
+  border:1px solid var(--card-edge);
+  border-radius:999px;
+  padding:7px 13px;
+  cursor:pointer;
+  transition:background .15s ease, color .15s ease, border-color .15s ease;
+}
+.cat-chip:hover{border-color:var(--marigold-dim);}
+.cat-chip.active{
+  background:var(--marigold);
+  color:#3A2603;
+  border-color:var(--marigold);
+}
+
+.cat-tag{
+  text-align:center;
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px;
+  color:var(--ink-dim);
+  min-height:16px;
+  margin-bottom:6px;
+}
+
+.mood-row{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding-bottom:4px;
+  margin-bottom:18px;
+  scrollbar-width:none;
+}
+.mood-row::-webkit-scrollbar{display:none;}
+.mood-chip{
+  flex-shrink:0;
+  font-family:'IBM Plex Mono', monospace;
+  font-size:12px;
+  letter-spacing:.02em;
+  background:var(--card);
+  color:var(--ink-dim);
+  border:1px solid var(--card-edge);
+  border-radius:999px;
+  padding:8px 14px;
+  cursor:pointer;
+  transition:background .15s ease, color .15s ease, border-color .15s ease;
+  white-space:nowrap;
+}
+.mood-chip:hover{border-color:var(--marigold-dim);}
+.mood-chip.active{
+  background:var(--marigold);
+  color:#3A2603;
+  border-color:var(--marigold);
+}
+
+.q-tag{
+  text-align:center;
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px;
+  color:var(--marigold);
+  min-height:16px;
+  margin-bottom:6px;
+}
+
 .ticket{
   position:relative;
   background:var(--card);
