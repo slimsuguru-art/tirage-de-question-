@@ -1,6 +1,6 @@
 // app.js
-// Logique principale : tirage, chronomètre, envoi anonyme, classement, partage.
-// Dépend de : questions.js (QUESTIONS), config.js (firebaseConfig),
+// Logique principale : tirage, ambiance, chronomètre, envoi anonyme, classement, partage.
+// Dépend de : questions.js (QUESTIONS, MOODS), config.js (firebaseConfig),
 // et des scripts Firebase + QRCode chargés dans index.html avant ce fichier.
 
 (function(){
@@ -38,6 +38,7 @@
   // ---------- Références DOM ----------
   var drawBtn = document.getElementById('drawBtn');
   var stage = document.getElementById('stage');
+  var stubLabel = document.getElementById('stubLabel');
   var ticketNo = document.getElementById('ticketNo');
   var answerZone = document.getElementById('answerZone');
   var answerInput = document.getElementById('answerInput');
@@ -45,6 +46,7 @@
   var matchResult = document.getElementById('matchResult');
   var timerFill = document.getElementById('timerFill');
   var timerNum = document.getElementById('timerNum');
+  var moodRow = document.getElementById('moodRow');
 
   var currentQId = null;
   var currentQuestionText = '';
@@ -52,6 +54,70 @@
   var ANSWER_SECONDS = 30;
   var countdownInterval = null;
   var countdownExpireTimeout = null;
+
+  function escapeHtml(s){
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function newTicketNumber(){
+    var n = Math.floor(100000 + Math.random()*899999);
+    ticketNo.textContent = 'N° ' + n;
+    return n;
+  }
+
+  // ---------- Sélecteur d'ambiance ----------
+  var currentMood = 'toutes';
+
+  function renderMoodChips(){
+    moodRow.innerHTML = '';
+    MOODS.forEach(function(m){
+      var btn = document.createElement('button');
+      btn.className = 'mood-chip' + (m.id === currentMood ? ' active' : '');
+      btn.type = 'button';
+      btn.textContent = m.emoji + ' ' + m.label;
+      btn.addEventListener('click', function(){
+        if(currentMood === m.id) return;
+        currentMood = m.id;
+        bagIndexes = []; // force un nouveau mélange selon la nouvelle ambiance
+        renderMoodChips();
+      });
+      moodRow.appendChild(btn);
+    });
+  }
+  renderMoodChips();
+
+  function moodLabelFor(id){
+    var found = null;
+    for(var i = 0; i < MOODS.length; i++){
+      if(MOODS[i].id === id){ found = MOODS[i]; break; }
+    }
+    return found ? (found.emoji + ' ' + found.label) : '';
+  }
+
+  // ---------- Sac à tirage sans répétition (filtré par ambiance) ----------
+  var bagIndexes = [];
+  function refillBag(){
+    var pool = [];
+    for(var i = 0; i < QUESTIONS.length; i++){
+      if(currentMood === 'toutes' || QUESTIONS[i].mood === currentMood){
+        pool.push(i);
+      }
+    }
+    if(pool.length === 0){
+      for(var j = 0; j < QUESTIONS.length; j++){ pool.push(j); }
+    }
+    for(var k = pool.length - 1; k > 0; k--){
+      var r = Math.floor(Math.random() * (k + 1));
+      var tmp = pool[k]; pool[k] = pool[r]; pool[r] = tmp;
+    }
+    bagIndexes = pool;
+  }
+  function drawIndexFromBag(){
+    if(bagIndexes.length === 0){ refillBag(); }
+    return bagIndexes.pop();
+  }
 
   // ---------- Compteur global en temps réel ----------
   var globalCountEl = document.getElementById('globalCount');
@@ -102,33 +168,6 @@
     }
   } else {
     globalCountEl.textContent = '—';
-  }
-
-  function escapeHtml(s){
-    var d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
-  }
-
-  function newTicketNumber(){
-    var n = Math.floor(100000 + Math.random()*899999);
-    ticketNo.textContent = 'N° ' + n;
-    return n;
-  }
-  var currentTicketNo = '';
-
-  // ---------- Sac à tirage sans répétition ----------
-  var bagIndexes = [];
-  function refillBag(){
-    bagIndexes = QUESTIONS.map(function(_, i){ return i; });
-    for(var i = bagIndexes.length - 1; i > 0; i--){
-      var j = Math.floor(Math.random() * (i + 1));
-      var tmp = bagIndexes[i]; bagIndexes[i] = bagIndexes[j]; bagIndexes[j] = tmp;
-    }
-  }
-  function drawIndexFromBag(){
-    if(bagIndexes.length === 0){ refillBag(); }
-    return bagIndexes.pop();
   }
 
   // ---------- Chronomètre ----------
@@ -205,16 +244,18 @@
       i++;
     }, 80);
 
-    currentTicketNo = newTicketNumber();
+    newTicketNumber();
     renderQR();
 
     var qIndex = drawIndexFromBag();
     currentQId = qIndex;
-    currentQuestionText = QUESTIONS[qIndex];
+    currentQuestionText = QUESTIONS[qIndex].text;
+    var questionMood = QUESTIONS[qIndex].mood;
 
     setTimeout(function(){
       clearInterval(flickerTimer);
       stage.innerHTML = '<p class="settled">' + escapeHtml(currentQuestionText) + '</p>';
+      stubLabel.innerHTML = 'Question du jour <span class="mood-tag">· ' + moodLabelFor(questionMood) + '</span>';
       drawBtn.disabled = false;
       resetAnswerZone();
     }, 650);
@@ -373,37 +414,31 @@
     canvas.width = W; canvas.height = H;
     var ctx = canvas.getContext('2d');
 
-    // Fond dégradé
     var grad = ctx.createRadialGradient(W*0.2, H*0.15, 50, W*0.5, H*0.5, W*0.8);
     grad.addColorStop(0, '#2A2049');
     grad.addColorStop(1, '#1F1730');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // Carte "ticket"
     var cardX = 60, cardY = 140, cardW = W - 120, cardH = 480;
     ctx.fillStyle = '#2A2140';
     roundRect(ctx, cardX, cardY, cardW, cardH, 28);
     ctx.fill();
 
-    // Perforations
     ctx.fillStyle = '#1F1730';
     ctx.beginPath(); ctx.arc(cardX, cardY + cardH/2, 20, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(cardX + cardW, cardY + cardH/2, 20, 0, Math.PI*2); ctx.fill();
 
-    // Eyebrow
     ctx.fillStyle = '#F4B740';
     ctx.font = '600 20px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('QUESTION DU JOUR', W/2, cardY + 56);
 
-    // Question
     ctx.fillStyle = '#F3ECE0';
     ctx.font = '700 34px sans-serif';
     ctx.textAlign = 'left';
     var qHeight = wrapText(ctx, question, cardX + 40, cardY + 120, cardW - 80, 44);
 
-    // Ligne perforée
     var dividerY = cardY + 120 + qHeight + 30;
     ctx.strokeStyle = '#352A4D';
     ctx.lineWidth = 2;
@@ -414,7 +449,6 @@
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Réponse
     ctx.fillStyle = '#B6A8CE';
     ctx.font = '600 16px monospace';
     ctx.fillText('MA RÉPONSE', cardX + 40, dividerY + 40);
@@ -422,7 +456,6 @@
     ctx.font = '700 30px sans-serif';
     wrapText(ctx, answer, cardX + 40, dividerY + 82, cardW - 80, 38);
 
-    // Footer
     ctx.fillStyle = '#B6A8CE';
     ctx.font = '500 20px sans-serif';
     ctx.textAlign = 'center';
@@ -465,7 +498,6 @@
       } else if(navigator.share){
         await navigator.share({ text: shareText, url: window.location.href });
       } else {
-        // Fallback : téléchargement de l'image + copie du texte
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
         a.href = url;
