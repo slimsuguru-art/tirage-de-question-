@@ -49,7 +49,7 @@
   var currentQId = null;
   var currentQuestionText = '';
   var currentAnswerText = '';
-  var ANSWER_SECONDS = 15;
+  var ANSWER_SECONDS = 30;
   var countdownInterval = null;
   var countdownExpireTimeout = null;
 
@@ -109,7 +109,7 @@
         return;
       }
       timerNum.textContent = remaining + 's';
-      if(remaining <= 4){
+      if(remaining <= 6){
         timerFill.classList.add('urgent');
         timerNum.classList.add('urgent');
       }
