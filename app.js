@@ -1,9 +1,13 @@
 // app.js
-// Logique principale : tirage, ambiance, chronomètre, envoi anonyme, classement, partage.
+// Logique principale : banque de questions (locale + Firestore), ambiance,
+// chronomètre, envoi anonyme modéré, limite quotidienne, classement, partage.
 // Dépend de : questions.js (QUESTIONS, MOODS), config.js (firebaseConfig),
 // et des scripts Firebase + QRCode chargés dans index.html avant ce fichier.
 
 (function(){
+
+  // Le filtre de mots interdits (BANNED_WORDS, containsBannedWord) est fourni
+  // par moderation.js, chargé juste avant ce fichier dans index.html.
 
   // ---------- Initialisation Firebase ----------
   var db = null;
@@ -47,6 +51,7 @@
   var timerFill = document.getElementById('timerFill');
   var timerNum = document.getElementById('timerNum');
   var moodRow = document.getElementById('moodRow');
+  var anonNote = document.querySelector('.anon-note');
 
   var currentQId = null;
   var currentQuestionText = '';
@@ -67,6 +72,36 @@
     return n;
   }
 
+  // ---------- Banque de questions fusionnée (locale + Firestore) ----------
+  var ALL_QUESTIONS = [];
+
+  function buildLocalQuestions(){
+    return QUESTIONS.map(function(q, i){
+      return { id: 'local-' + i, text: q.text, mood: q.mood };
+    });
+  }
+
+  async function loadAllQuestions(){
+    var local = buildLocalQuestions();
+    if(!firebaseReady){
+      ALL_QUESTIONS = local;
+      return;
+    }
+    try{
+      var snap = await db.collection('questions').limit(500).get();
+      var remote = [];
+      snap.forEach(function(doc){
+        var d = doc.data();
+        if(d && typeof d.text === 'string' && typeof d.mood === 'string'){
+          remote.push({ id: doc.id, text: d.text, mood: d.mood });
+        }
+      });
+      ALL_QUESTIONS = local.concat(remote);
+    }catch(e){
+      ALL_QUESTIONS = local;
+    }
+  }
+
   // ---------- Sélecteur d'ambiance ----------
   var currentMood = 'toutes';
 
@@ -80,13 +115,12 @@
       btn.addEventListener('click', function(){
         if(currentMood === m.id) return;
         currentMood = m.id;
-        bagIndexes = []; // force un nouveau mélange selon la nouvelle ambiance
+        bagIndexes = [];
         renderMoodChips();
       });
       moodRow.appendChild(btn);
     });
   }
-  renderMoodChips();
 
   function moodLabelFor(id){
     var found = null;
@@ -100,13 +134,13 @@
   var bagIndexes = [];
   function refillBag(){
     var pool = [];
-    for(var i = 0; i < QUESTIONS.length; i++){
-      if(currentMood === 'toutes' || QUESTIONS[i].mood === currentMood){
+    for(var i = 0; i < ALL_QUESTIONS.length; i++){
+      if(currentMood === 'toutes' || ALL_QUESTIONS[i].mood === currentMood){
         pool.push(i);
       }
     }
     if(pool.length === 0){
-      for(var j = 0; j < QUESTIONS.length; j++){ pool.push(j); }
+      for(var j = 0; j < ALL_QUESTIONS.length; j++){ pool.push(j); }
     }
     for(var k = pool.length - 1; k > 0; k--){
       var r = Math.floor(Math.random() * (k + 1));
@@ -155,19 +189,66 @@
     requestAnimationFrame(step);
   }
 
-  if(firebaseReady){
-    try{
-      db.collection('stats').doc('global').onSnapshot(function(doc){
-        var total = (doc.exists && typeof doc.data().totalAnswers === 'number') ? doc.data().totalAnswers : 0;
-        animateCounterTo(total);
-      }, function(){
+  function setupGlobalCounter(){
+    if(firebaseReady){
+      try{
+        db.collection('stats').doc('global').onSnapshot(function(doc){
+          var total = (doc.exists && typeof doc.data().totalAnswers === 'number') ? doc.data().totalAnswers : 0;
+          animateCounterTo(total);
+        }, function(){
+          globalCountEl.textContent = '—';
+        });
+      }catch(e){
         globalCountEl.textContent = '—';
-      });
-    }catch(e){
+      }
+    } else {
       globalCountEl.textContent = '—';
     }
-  } else {
-    globalCountEl.textContent = '—';
+  }
+
+  // ---------- Limite quotidienne de réponses envoyées ----------
+  var MAX_ANSWERS_PER_DAY = 4;
+  var DAILY_KEY = 'tirage_daily_answers';
+
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate();
+  }
+
+  function getDailyState(){
+    try{
+      var raw = localStorage.getItem(DAILY_KEY);
+      if(!raw) return { date: todayStr(), count: 0 };
+      var parsed = JSON.parse(raw);
+      if(parsed.date !== todayStr()) return { date: todayStr(), count: 0 };
+      return parsed;
+    }catch(e){
+      return { date: todayStr(), count: 0 };
+    }
+  }
+
+  function saveDailyState(state){
+    try{ localStorage.setItem(DAILY_KEY, JSON.stringify(state)); }catch(e){}
+  }
+
+  function remainingAnswersToday(){
+    var state = getDailyState();
+    return Math.max(0, MAX_ANSWERS_PER_DAY - state.count);
+  }
+
+  function registerAnswerSent(){
+    var state = getDailyState();
+    state.count++;
+    saveDailyState(state);
+  }
+
+  function updateAnonNote(){
+    var remaining = remainingAnswersToday();
+    if(remaining > 0){
+      anonNote.textContent = "Aucun nom, aucune donnée personnelle n'est enregistrée. Il te reste " + remaining + ' réponse' + (remaining > 1 ? 's' : '') + " aujourd'hui.";
+    } else {
+      anonNote.textContent = "Tu as utilisé tes réponses du jour — reviens demain pour en envoyer d'autres !";
+    }
   }
 
   // ---------- Chronomètre ----------
@@ -219,12 +300,24 @@
   }
 
   function resetAnswerZone(){
-    answerInput.value = '';
-    answerInput.disabled = false;
-    sendBtn.disabled = false;
     matchResult.classList.remove('show');
     matchResult.innerHTML = '';
     answerZone.classList.add('active');
+    updateAnonNote();
+
+    if(remainingAnswersToday() <= 0){
+      answerInput.value = '';
+      answerInput.disabled = true;
+      sendBtn.disabled = true;
+      stopCountdown();
+      timerFill.style.width = '0%';
+      timerNum.textContent = '0s';
+      return;
+    }
+
+    answerInput.value = '';
+    answerInput.disabled = false;
+    sendBtn.disabled = false;
     startCountdown();
     answerInput.focus();
   }
@@ -233,13 +326,12 @@
   var flickerTimer = null;
 
   // ---------- Question spéciale du jour ----------
-  // Même index pour tout le monde, le même jour calendaire, sans backend.
   function getDailyIndex(){
     var now = new Date();
     var startOfYear = new Date(now.getFullYear(), 0, 0);
     var diff = now - startOfYear;
     var dayOfYear = Math.floor(diff / 86400000);
-    return dayOfYear % QUESTIONS.length;
+    return dayOfYear % ALL_QUESTIONS.length;
   }
 
   function drawQuestion(forcedIndex, isSpecial){
@@ -258,9 +350,10 @@
     renderQR();
 
     var qIndex = (typeof forcedIndex === 'number') ? forcedIndex : drawIndexFromBag();
-    currentQId = qIndex;
-    currentQuestionText = QUESTIONS[qIndex].text;
-    var questionMood = QUESTIONS[qIndex].mood;
+    var item = ALL_QUESTIONS[qIndex];
+    currentQId = item.id;
+    currentQuestionText = item.text;
+    var questionMood = item.mood;
 
     var ticketEl = document.querySelector('.ticket');
 
@@ -295,6 +388,16 @@
     var raw = answerInput.value.trim();
     if(!raw || currentQId === null) return;
     if(answerInput.disabled) return;
+    if(remainingAnswersToday() <= 0){
+      updateAnonNote();
+      return;
+    }
+
+    if(containsBannedWord(raw)){
+      matchResult.innerHTML = "Cette réponse contient un mot non autorisé sur cette plateforme familiale — essaie de la reformuler.";
+      matchResult.classList.add('show');
+      return;
+    }
 
     stopCountdown();
 
@@ -340,6 +443,7 @@
         totalAnswers: firebase.firestore.FieldValue.increment(1)
       }, { merge: true }).catch(function(){});
 
+      registerAnswerSent();
       currentAnswerText = raw.slice(0, 80);
 
       var headline;
@@ -353,6 +457,12 @@
 
       await loadTopAnswers(thisQId);
       renderShareButton();
+      updateAnonNote();
+
+      if(remainingAnswersToday() <= 0){
+        answerInput.disabled = true;
+        sendBtn.disabled = true;
+      }
     }catch(err){
       matchResult.innerHTML = "La comparaison n'a pas pu aboutir, réessaie dans un instant.";
       sendBtn.disabled = false;
@@ -536,14 +646,21 @@
     }
   }
 
-  // ---------- Écouteurs ----------
-  drawBtn.addEventListener('click', function(){ drawQuestion(); });
-  sendBtn.addEventListener('click', sendAnswer);
-  answerInput.addEventListener('keydown', function(e){
-    if(e.key === 'Enter'){ sendAnswer(); }
-  });
+  // ---------- Initialisation ----------
+  async function init(){
+    await loadAllQuestions();
+    renderMoodChips();
+    setupGlobalCounter();
 
-  // Affiche automatiquement la question spéciale du jour à l'arrivée sur le site.
-  drawQuestion(getDailyIndex(), true);
+    drawBtn.addEventListener('click', function(){ drawQuestion(); });
+    sendBtn.addEventListener('click', sendAnswer);
+    answerInput.addEventListener('keydown', function(e){
+      if(e.key === 'Enter'){ sendAnswer(); }
+    });
+
+    drawQuestion(getDailyIndex(), true);
+  }
+
+  init();
 
 })();
