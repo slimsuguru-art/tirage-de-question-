@@ -1,0 +1,16 @@
+{
+  "name": "tirage-quotidien-question-generator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Genere automatiquement de nouvelles questions via l'API Anthropic et les publie dans Firestore.",
+  "main": "generate-questions.js",
+  "scripts": {
+    "generate": "node generate-questions.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
