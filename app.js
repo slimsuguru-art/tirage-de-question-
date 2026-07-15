@@ -232,7 +232,17 @@
   var flickerWords = ['?','·','—','?','·','—'];
   var flickerTimer = null;
 
-  function drawQuestion(){
+  // ---------- Question spéciale du jour ----------
+  // Même index pour tout le monde, le même jour calendaire, sans backend.
+  function getDailyIndex(){
+    var now = new Date();
+    var startOfYear = new Date(now.getFullYear(), 0, 0);
+    var diff = now - startOfYear;
+    var dayOfYear = Math.floor(diff / 86400000);
+    return dayOfYear % QUESTIONS.length;
+  }
+
+  function drawQuestion(forcedIndex, isSpecial){
     stopCountdown();
     drawBtn.disabled = true;
     answerZone.classList.remove('active');
@@ -247,15 +257,25 @@
     newTicketNumber();
     renderQR();
 
-    var qIndex = drawIndexFromBag();
+    var qIndex = (typeof forcedIndex === 'number') ? forcedIndex : drawIndexFromBag();
     currentQId = qIndex;
     currentQuestionText = QUESTIONS[qIndex].text;
     var questionMood = QUESTIONS[qIndex].mood;
 
+    var ticketEl = document.querySelector('.ticket');
+
     setTimeout(function(){
       clearInterval(flickerTimer);
       stage.innerHTML = '<p class="settled">' + escapeHtml(currentQuestionText) + '</p>';
-      stubLabel.innerHTML = 'Question du jour <span class="mood-tag">· ' + moodLabelFor(questionMood) + '</span>';
+      if(isSpecial){
+        stubLabel.innerHTML = '⭐ Question spéciale du jour';
+        stubLabel.classList.add('special');
+        if(ticketEl) ticketEl.classList.add('special');
+      } else {
+        stubLabel.innerHTML = 'Question du jour <span class="mood-tag">· ' + moodLabelFor(questionMood) + '</span>';
+        stubLabel.classList.remove('special');
+        if(ticketEl) ticketEl.classList.remove('special');
+      }
       drawBtn.disabled = false;
       resetAnswerZone();
     }, 650);
@@ -517,10 +537,13 @@
   }
 
   // ---------- Écouteurs ----------
-  drawBtn.addEventListener('click', drawQuestion);
+  drawBtn.addEventListener('click', function(){ drawQuestion(); });
   sendBtn.addEventListener('click', sendAnswer);
   answerInput.addEventListener('keydown', function(e){
     if(e.key === 'Enter'){ sendAnswer(); }
   });
+
+  // Affiche automatiquement la question spéciale du jour à l'arrivée sur le site.
+  drawQuestion(getDailyIndex(), true);
 
 })();
