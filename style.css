@@ -185,6 +185,10 @@ body{
   border-radius:20px;
   padding:34px 28px 24px;
   overflow:hidden;
+  transition: box-shadow .3s ease;
+}
+.ticket.special{
+  box-shadow: 0 0 0 2px var(--marigold), 0 0 24px rgba(244,183,64,.25);
 }
 .ticket::before, .ticket::after{
   content:"";
@@ -206,6 +210,10 @@ body{
   text-transform:uppercase;
   color:var(--ink-dim);
   margin-bottom:18px;
+  transition:color .2s ease;
+}
+.stub-label.special{
+  color:var(--marigold);
 }
 
 .stage{
