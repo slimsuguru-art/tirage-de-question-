@@ -251,6 +251,75 @@
     }
   }
 
+  // ---------- Série (streak) de jours consécutifs ----------
+  var STREAK_KEY = 'tirage_streak';
+  var streakBadge = document.getElementById('streakBadge');
+  var streakCountEl = document.getElementById('streakCount');
+  var streakPluralEl = document.getElementById('streakPlural');
+
+  function dateStrFromDate(d){
+    return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate();
+  }
+  function yesterdayStr(){
+    var d = new Date();
+    d.setDate(d.getDate() - 1);
+    return dateStrFromDate(d);
+  }
+
+  function getStreakState(){
+    try{
+      var raw = localStorage.getItem(STREAK_KEY);
+      if(!raw) return { lastAnswerDate: null, streak: 0 };
+      return JSON.parse(raw);
+    }catch(e){
+      return { lastAnswerDate: null, streak: 0 };
+    }
+  }
+  function saveStreakState(state){
+    try{ localStorage.setItem(STREAK_KEY, JSON.stringify(state)); }catch(e){}
+  }
+
+  function renderStreak(count, animate){
+    if(count > 0){
+      streakBadge.style.display = '';
+      streakCountEl.textContent = count;
+      streakPluralEl.textContent = count > 1 ? 's' : '';
+      if(animate){
+        streakBadge.classList.add('bump');
+        setTimeout(function(){ streakBadge.classList.remove('bump'); }, 400);
+      }
+    } else {
+      streakBadge.style.display = 'none';
+    }
+  }
+
+  function displayCurrentStreak(){
+    var state = getStreakState();
+    var today = todayStr();
+    if(state.lastAnswerDate === today || state.lastAnswerDate === yesterdayStr()){
+      renderStreak(state.streak, false);
+    } else {
+      renderStreak(0, false);
+    }
+  }
+
+  function registerStreakOnAnswer(){
+    var state = getStreakState();
+    var today = todayStr();
+    if(state.lastAnswerDate === today){
+      // déjà comptée aujourd'hui, rien à faire
+      return;
+    }
+    if(state.lastAnswerDate === yesterdayStr()){
+      state.streak = (state.streak || 0) + 1;
+    } else {
+      state.streak = 1;
+    }
+    state.lastAnswerDate = today;
+    saveStreakState(state);
+    renderStreak(state.streak, true);
+  }
+
   // ---------- Chronomètre ----------
   function stopCountdown(){
     clearInterval(countdownInterval);
@@ -444,6 +513,7 @@
       }, { merge: true }).catch(function(){});
 
       registerAnswerSent();
+      registerStreakOnAnswer();
       currentAnswerText = raw.slice(0, 80);
 
       var headline;
@@ -651,6 +721,7 @@
     await loadAllQuestions();
     renderMoodChips();
     setupGlobalCounter();
+    displayCurrentStreak();
 
     drawBtn.addEventListener('click', function(){ drawQuestion(); });
     sendBtn.addEventListener('click', sendAnswer);
