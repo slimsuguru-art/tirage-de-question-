@@ -29,12 +29,12 @@
         text: window.location.href,
         width: 64,
         height: 64,
-        colorDark: '#1F1730',
+        colorDark: '#16232A',
         colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.M
       });
     }catch(e){
-      qrTarget.innerHTML = '<span style="font-size:9px;color:#1F1730;">QR indisponible</span>';
+      qrTarget.innerHTML = '<span style="font-size:9px;color:#16232A;">QR indisponible</span>';
     }
   }
   renderQR();
@@ -616,31 +616,31 @@
 
     var grad = ctx.createRadialGradient(W*0.2, H*0.15, 50, W*0.5, H*0.5, W*0.8);
     grad.addColorStop(0, '#2A2049');
-    grad.addColorStop(1, '#1F1730');
+    grad.addColorStop(1, '#16232A');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
     var cardX = 60, cardY = 140, cardW = W - 120, cardH = 480;
-    ctx.fillStyle = '#2A2140';
+    ctx.fillStyle = '#1E2E35';
     roundRect(ctx, cardX, cardY, cardW, cardH, 28);
     ctx.fill();
 
-    ctx.fillStyle = '#1F1730';
+    ctx.fillStyle = '#16232A';
     ctx.beginPath(); ctx.arc(cardX, cardY + cardH/2, 20, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(cardX + cardW, cardY + cardH/2, 20, 0, Math.PI*2); ctx.fill();
 
-    ctx.fillStyle = '#F4B740';
+    ctx.fillStyle = '#E3A857';
     ctx.font = '600 20px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('QUESTION DU JOUR', W/2, cardY + 56);
 
-    ctx.fillStyle = '#F3ECE0';
-    ctx.font = '700 34px sans-serif';
+    ctx.fillStyle = '#F2EDE2';
+    ctx.font = "600 32px 'Fraunces', serif";
     ctx.textAlign = 'left';
     var qHeight = wrapText(ctx, question, cardX + 40, cardY + 120, cardW - 80, 44);
 
     var dividerY = cardY + 120 + qHeight + 30;
-    ctx.strokeStyle = '#352A4D';
+    ctx.strokeStyle = '#2C4048';
     ctx.lineWidth = 2;
     ctx.setLineDash([8, 8]);
     ctx.beginPath();
@@ -649,19 +649,19 @@
     ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.fillStyle = '#B6A8CE';
+    ctx.fillStyle = '#9FB3B4';
     ctx.font = '600 16px monospace';
     ctx.fillText('MA RÉPONSE', cardX + 40, dividerY + 40);
-    ctx.fillStyle = '#FF6B5B';
-    ctx.font = '700 30px sans-serif';
+    ctx.fillStyle = '#E08668';
+    ctx.font = "600 28px 'Fraunces', serif";
     wrapText(ctx, answer, cardX + 40, dividerY + 82, cardW - 80, 38);
 
-    ctx.fillStyle = '#B6A8CE';
+    ctx.fillStyle = '#9FB3B4';
     ctx.font = '500 20px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Fais le test toi aussi \u2192', W/2, H - 60);
     ctx.font = '600 16px monospace';
-    ctx.fillStyle = '#F4B740';
+    ctx.fillStyle = '#E3A857';
     ctx.fillText(window.location.hostname || 'scan le QR code', W/2, H - 32);
 
     return canvas;
