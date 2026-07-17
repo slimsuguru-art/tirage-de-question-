@@ -51,6 +51,7 @@
   var timerFill = document.getElementById('timerFill');
   var timerNum = document.getElementById('timerNum');
   var moodRow = document.getElementById('moodRow');
+  var metaDot = document.getElementById('metaDot');
   var anonNote = document.querySelector('.anon-note');
 
   var currentQId = null;
@@ -293,6 +294,7 @@
   function renderStreak(count, animate){
     if(count > 0){
       streakBadge.style.display = '';
+      if(metaDot) metaDot.style.display = '';
       streakCountEl.textContent = count;
       streakPluralEl.textContent = count > 1 ? 's' : '';
       if(animate){
@@ -301,6 +303,7 @@
       }
     } else {
       streakBadge.style.display = 'none';
+      if(metaDot) metaDot.style.display = 'none';
     }
   }
 
