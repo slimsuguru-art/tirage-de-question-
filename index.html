@@ -62,39 +62,70 @@
     </div>
   </header>
 
-  <div class="ticket">
-    <div class="mood-row" id="moodRow"></div>
+  <nav class="section-nav" id="sectionNav">
+    <button class="section-tab active" data-section="quotidien" type="button">✨ Quotidien</button>
+    <button class="section-tab" data-section="confessions" type="button">🕊️ Confessions</button>
+  </nav>
 
-    <div class="stub-label" id="stubLabel">Question du jour</div>
-    <div class="stage" id="stage">
-      <p class="placeholder" id="stageText">Appuie sur « tirer une question » pour démarrer.</p>
-    </div>
+  <section id="section-quotidien" class="app-section active">
+    <div class="ticket">
+      <div class="mood-row" id="moodRow"></div>
 
-    <div class="answer-zone" id="answerZone">
-      <div class="timer-wrap">
-        <div class="timer-track"><div class="timer-fill" id="timerFill"></div></div>
-        <div class="timer-num" id="timerNum">30s</div>
+      <div class="stub-label" id="stubLabel">Question du jour</div>
+      <div class="stage" id="stage">
+        <p class="placeholder" id="stageText">Appuie sur « tirer une question » pour démarrer.</p>
       </div>
-      <label for="answerInput">Ta réponse, en toute anonymité</label>
-      <div class="answer-row">
-        <input id="answerInput" type="text" maxlength="80" placeholder="Écris ta réponse ici...">
-        <button id="sendBtn">Envoyer</button>
+
+      <div class="answer-zone" id="answerZone">
+        <div class="timer-wrap">
+          <div class="timer-track"><div class="timer-fill" id="timerFill"></div></div>
+          <div class="timer-num" id="timerNum">30s</div>
+        </div>
+        <label for="answerInput">Ta réponse, en toute anonymité</label>
+        <div class="answer-row">
+          <input id="answerInput" type="text" maxlength="80" placeholder="Écris ta réponse ici...">
+          <button id="sendBtn">Envoyer</button>
+        </div>
+        <div class="anon-note">Aucun nom, aucune donnée personnelle n'est enregistrée — seule ta réponse est comparée aux autres.</div>
+        <div class="match-result" id="matchResult"></div>
       </div>
-      <div class="anon-note">Aucun nom, aucune donnée personnelle n'est enregistrée — seule ta réponse est comparée aux autres.</div>
-      <div class="match-result" id="matchResult"></div>
+
+      <div class="perforation"></div>
+      <div class="cta-row">
+        <button class="draw" id="drawBtn">Tirer une question</button>
+      </div>
+      <div class="footer">
+        <div class="ticket-no" id="ticketNo">N° ————</div>
+        <div class="qr-box" id="qrBox"></div>
+      </div>
     </div>
 
-    <div class="perforation"></div>
-    <div class="cta-row">
-      <button class="draw" id="drawBtn">Tirer une question</button>
-    </div>
-    <div class="footer">
-      <div class="ticket-no" id="ticketNo">N° ————</div>
-      <div class="qr-box" id="qrBox"></div>
-    </div>
-  </div>
+    <p class="hint">Scanne ce code pour rejouer et tirer une nouvelle question à tout moment.</p>
+  </section>
 
-  <p class="hint">Scanne ce code pour rejouer et tirer une nouvelle question à tout moment.</p>
+  <section id="section-confessions" class="app-section">
+    <div class="confessions-intro">
+      <div class="confessions-badge">🔒 Anonyme · 🕊️ Sans jugement · 👁️ Relu avant publication</div>
+      <p class="confessions-lead">
+        Un espace pour dire ce que tu portes, sans donner ton nom, sans être critiqué.
+        Chaque confession est relue avant d'être visible par les autres — aucun commentaire
+        n'est possible ici, seulement des réactions bienveillantes.
+      </p>
+    </div>
+
+    <div class="confession-form">
+      <label for="confessionInput">Qu'est-ce que tu as sur le cœur aujourd'hui ?</label>
+      <textarea id="confessionInput" maxlength="600" rows="5" placeholder="Écris librement, en toute confidentialité..."></textarea>
+      <div class="confession-count"><span id="confessionCharCount">0</span> / 600</div>
+      <button class="draw confession-submit" id="confessionSubmitBtn">Partager anonymement</button>
+      <div class="confession-status" id="confessionStatus"></div>
+    </div>
+
+    <div class="confessions-feed-header">Confessions partagées par la communauté</div>
+    <div class="confessions-feed" id="confessionsFeed">
+      <p class="confessions-empty" id="confessionsEmpty">Chargement…</p>
+    </div>
+  </section>
 </div>
 
 <!-- Librairies externes -->
@@ -107,6 +138,7 @@
 <script src="questions.js"></script>
 <script src="moderation.js"></script>
 <script src="app.js"></script>
+<script src="confessions.js"></script>
 
 <script>
   (function(){
