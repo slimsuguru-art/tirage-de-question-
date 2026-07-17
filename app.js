@@ -476,7 +476,7 @@
       return;
     }
 
-    if(containsBannedWord(raw)){
+    if(containsBannedWord(raw) || containsSensitiveTopic(raw)){
       matchResult.innerHTML = "Cette réponse contient un mot non autorisé sur cette plateforme familiale — essaie de la reformuler.";
       matchResult.classList.add('show');
       return;

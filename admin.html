@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modération — Confessions</title>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<div class="admin-wrap">
+  <h1>Modération des confessions</h1>
+
+  <div id="loginBox" class="login-box">
+    <p>Connexion administrateur requise.</p>
+    <input id="emailInput" type="email" placeholder="Email">
+    <input id="passwordInput" type="password" placeholder="Mot de passe">
+    <button id="loginBtn">Se connecter</button>
+    <div id="loginError" class="error-msg"></div>
+  </div>
+
+  <div id="adminPanel" class="admin-panel" style="display:none;">
+    <div class="admin-header">
+      <span id="adminEmail"></span>
+      <button id="logoutBtn">Déconnexion</button>
+    </div>
+
+    <h2>En attente de validation</h2>
+    <div id="pendingList" class="pending-list">
+      <p class="empty-msg">Chargement…</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script src="admin.js"></script>
+
+</body>
+</html>
