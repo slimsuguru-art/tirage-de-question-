@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Partager mon histoire — Les Histoires</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="histoires-style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="container">
+    <a href="accueil.html" class="site-logo">Les <span>Histoires</span></a>
+    <div class="nav-links">
+      <a href="accueil.html">Accueil</a>
+      <a href="histoires.html">Les Histoires</a>
+      <a href="partager.html" class="current">Partager mon histoire</a>
+      <a href="apropos.html">À propos</a>
+      <a href="contact.html">Contact</a>
+      <a href="index.html" class="nav-secondary">🎟️ Question du jour</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+    <div class="eyebrow">Ton histoire compte</div>
+    <h1>Raconte ce que tu <em>traverses</em>.</h1>
+    <p class="lead">
+      Aucun nom, aucune donnée personnelle n'est demandée ni publiée. Ton histoire sera relue
+      avant d'être visible par les autres, pour garantir un espace sain.
+    </p>
+
+    <div class="share-form">
+      <label for="storyTheme">Quelle thématique correspond le mieux ?</label>
+      <select id="storyTheme">
+        <option value="solitude">Solitude</option>
+        <option value="etudes">Études</option>
+        <option value="famille">Famille</option>
+        <option value="anxiete-sociale">Anxiété Sociale</option>
+      </select>
+
+      <label for="storyText">Ton histoire</label>
+      <textarea id="storyText" maxlength="1500" rows="8" placeholder="Écris librement, à ton rythme..."></textarea>
+      <div class="char-count"><span id="storyCharCount">0</span> / 1500</div>
+
+      <button class="btn btn-primary" id="storySubmitBtn" style="width:100%;">Partager anonymement</button>
+      <div class="form-status" id="storyStatus"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    Les Histoires — un espace de solidarité entre pairs. <a href="apropos.html">En savoir plus</a>
+  </div>
+</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script src="moderation.js"></script>
+<script src="stories.js"></script>
+
+</body>
+</html>
