@@ -62,10 +62,9 @@
     </div>
   </header>
 
-  <nav class="section-nav" id="sectionNav">
-    <button class="section-tab active" data-section="quotidien" type="button">✨ Quotidien</button>
-    <button class="section-tab" data-section="confessions" type="button">🕊️ Confessions</button>
-  </nav>
+  <p style="text-align:center; margin:-12px 0 24px;">
+    <a href="accueil.html" style="font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--marigold); text-decoration:none; border:1px solid var(--marigold-dim); border-radius:999px; padding:6px 14px;">← Retour à Les Histoires</a>
+  </p>
 
   <section id="section-quotidien" class="app-section active">
     <div class="ticket">
@@ -102,30 +101,6 @@
 
     <p class="hint">Scanne ce code pour rejouer et tirer une nouvelle question à tout moment.</p>
   </section>
-
-  <section id="section-confessions" class="app-section">
-    <div class="confessions-intro">
-      <div class="confessions-badge">🔒 Anonyme · 🕊️ Sans jugement · 👁️ Relu avant publication</div>
-      <p class="confessions-lead">
-        Un espace pour dire ce que tu portes, sans donner ton nom, sans être critiqué.
-        Chaque confession est relue avant d'être visible par les autres — aucun commentaire
-        n'est possible ici, seulement des réactions bienveillantes.
-      </p>
-    </div>
-
-    <div class="confession-form">
-      <label for="confessionInput">Qu'est-ce que tu as sur le cœur aujourd'hui ?</label>
-      <textarea id="confessionInput" maxlength="600" rows="5" placeholder="Écris librement, en toute confidentialité..."></textarea>
-      <div class="confession-count"><span id="confessionCharCount">0</span> / 600</div>
-      <button class="draw confession-submit" id="confessionSubmitBtn">Partager anonymement</button>
-      <div class="confession-status" id="confessionStatus"></div>
-    </div>
-
-    <div class="confessions-feed-header">Confessions partagées par la communauté</div>
-    <div class="confessions-feed" id="confessionsFeed">
-      <p class="confessions-empty" id="confessionsEmpty">Chargement…</p>
-    </div>
-  </section>
 </div>
 
 <!-- Librairies externes -->
@@ -138,7 +113,6 @@
 <script src="questions.js"></script>
 <script src="moderation.js"></script>
 <script src="app.js"></script>
-<script src="confessions.js"></script>
 
 <script>
   (function(){
