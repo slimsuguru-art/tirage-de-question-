@@ -1,23 +1,18 @@
 // stories.js
-// Gère la page "Partager mon histoire" (soumission vers la file de modération)
-// ET la page "Les Histoires" (fil des histoires approuvées, filtrable par thème,
-// réactions bienveillantes uniquement — aucun commentaire libre).
-// Dépend de : config.js, moderation.js (uniquement sur partager.html),
-// et des scripts Firebase compat.
+// Gère "Partager mon histoire" (soumission vers stories_pending) et
+// "Les Histoires" (fil des histoires approuvées, filtrable par thème,
+// réactions bienveillantes uniquement). Utilise Supabase.
 
 (function(){
 
-  var db = null;
-  var firebaseReady = false;
+  var sb = null;
+  var supabaseReady = false;
   try{
-    if(typeof firebaseConfig !== 'undefined' && firebaseConfig.apiKey && firebaseConfig.apiKey !== "REMPLACE_MOI"){
-      if(!firebase.apps || !firebase.apps.length){
-        firebase.initializeApp(firebaseConfig);
-      }
-      db = firebase.firestore();
-      firebaseReady = true;
+    if(typeof supabaseConfig !== 'undefined' && supabaseConfig.url && supabaseConfig.anonKey){
+      sb = supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey);
+      supabaseReady = true;
     }
-  }catch(e){ firebaseReady = false; }
+  }catch(e){ supabaseReady = false; }
 
   var THEMES = [
     { id: 'solitude', label: 'Solitude' },
@@ -65,7 +60,7 @@
         statusEl.textContent = "Un peu court pour une histoire — dis-en un peu plus, si tu en as la force.";
         return;
       }
-      if(!firebaseReady){
+      if(!supabaseReady){
         statusEl.className = 'form-status';
         statusEl.textContent = "Le partage n'est pas encore activé sur ce site.";
         return;
@@ -82,13 +77,14 @@
       submitBtn.textContent = 'Envoi en cours…';
 
       try{
-        await db.collection('stories_pending').add({
+        var result = await sb.from('stories_pending').insert({
           text: raw.slice(0, 1500),
           theme: storyTheme.value,
           flagged: isDistress,
-          status: 'pending',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          status: 'pending'
         });
+
+        if(result.error){ throw new Error(result.error.message); }
 
         storyText.value = '';
         charCountEl.textContent = '0';
@@ -149,7 +145,7 @@
     }
 
     async function loadStoriesFeed(){
-      if(!firebaseReady){
+      if(!supabaseReady){
         storiesEmpty.style.display = '';
         storiesEmpty.textContent = "Le fil n'est pas encore disponible.";
         return;
@@ -160,25 +156,22 @@
       storiesEmpty.textContent = 'Chargement…';
 
       try{
-        var query = db.collection('stories').orderBy('approvedAt', 'desc').limit(50);
-        var snap = await query.get();
+        var query = sb.from('stories').select('id,text,theme,reactions').order('approved_at', { ascending: false }).limit(50);
+        if(currentTheme !== 'toutes'){
+          query = query.eq('theme', currentTheme);
+        }
+        var result = await query;
+        if(result.error){ throw new Error(result.error.message); }
 
-        var docs = [];
-        snap.forEach(function(doc){
-          var d = doc.data();
-          if(currentTheme === 'toutes' || d.theme === currentTheme){
-            docs.push({ id: doc.id, data: d });
-          }
-        });
-
-        if(docs.length === 0){
+        var rows = result.data || [];
+        if(rows.length === 0){
           storiesEmpty.textContent = "Aucune histoire dans cette thématique pour l'instant — sois peut-être la première voix.";
           return;
         }
 
         storiesEmpty.style.display = 'none';
-        docs.forEach(function(item){
-          renderStoryCard(item.id, item.data);
+        rows.forEach(function(row){
+          renderStoryCard(row.id, row);
         });
       }catch(e){
         storiesEmpty.textContent = "Le fil n'a pas pu être chargé.";
@@ -216,12 +209,11 @@
 
         btn.addEventListener('click', function(){
           btn.disabled = true;
-          var fieldPath = 'reactions.' + r.id;
-          var update = {};
-          update[fieldPath] = firebase.firestore.FieldValue.increment(1);
-          db.collection('stories').doc(id).update(update)
-            .then(function(){
-              countSpan.textContent = (parseInt(countSpan.textContent, 10) || 0) + 1;
+          sb.rpc('increment_reaction', { story_id: id, reaction_key: r.id })
+            .then(function(result){
+              if(!result.error){
+                countSpan.textContent = (parseInt(countSpan.textContent, 10) || 0) + 1;
+              }
             })
             .catch(function(){})
             .finally(function(){ btn.disabled = false; });
