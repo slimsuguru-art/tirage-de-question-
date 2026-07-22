@@ -1,24 +1,20 @@
 // app.js
-// Logique principale : banque de questions (locale + Firestore), ambiance,
+// Logique principale : banque de questions (locale + Supabase), ambiance,
 // chronomètre, envoi anonyme modéré, limite quotidienne, classement, partage.
-// Dépend de : questions.js (QUESTIONS, MOODS), config.js (firebaseConfig),
-// et des scripts Firebase + QRCode chargés dans index.html avant ce fichier.
+// Dépend de : questions.js (QUESTIONS, MOODS), config.js (supabaseConfig),
+// moderation.js, et le script Supabase chargé dans index.html avant ce fichier.
 
 (function(){
 
-  // Le filtre de mots interdits (BANNED_WORDS, containsBannedWord) est fourni
-  // par moderation.js, chargé juste avant ce fichier dans index.html.
-
-  // ---------- Initialisation Firebase ----------
-  var db = null;
-  var firebaseReady = false;
+  // ---------- Initialisation Supabase ----------
+  var sb = null;
+  var supabaseReady = false;
   try{
-    if(firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "REMPLACE_MOI"){
-      firebase.initializeApp(firebaseConfig);
-      db = firebase.firestore();
-      firebaseReady = true;
+    if(supabaseConfig && supabaseConfig.url && supabaseConfig.anonKey){
+      sb = supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey);
+      supabaseReady = true;
     }
-  }catch(e){ firebaseReady = false; }
+  }catch(e){ supabaseReady = false; }
 
   // ---------- QR code auto-référencé ----------
   var qrTarget = document.getElementById('qrBox');
@@ -29,12 +25,12 @@
         text: window.location.href,
         width: 64,
         height: 64,
-        colorDark: '#16232A',
+        colorDark: '#1F1730',
         colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.M
       });
     }catch(e){
-      qrTarget.innerHTML = '<span style="font-size:9px;color:#16232A;">QR indisponible</span>';
+      qrTarget.innerHTML = '<span style="font-size:9px;color:#1F1730;">QR indisponible</span>';
     }
   }
   renderQR();
@@ -73,7 +69,7 @@
     return n;
   }
 
-  // ---------- Banque de questions fusionnée (locale + Firestore) ----------
+  // ---------- Banque de questions fusionnée (locale + Supabase) ----------
   var ALL_QUESTIONS = [];
 
   function buildLocalQuestions(){
@@ -84,29 +80,24 @@
 
   async function loadAllQuestions(){
     var local = buildLocalQuestions();
-    if(!firebaseReady){
+    if(!supabaseReady){
       ALL_QUESTIONS = local;
       return;
     }
     try{
-      var fetchPromise = db.collection('questions').limit(500).get();
+      var fetchPromise = sb.from('questions').select('id,text,mood').limit(500);
       var timeoutPromise = new Promise(function(resolve){
         setTimeout(function(){ resolve(null); }, 4000);
       });
-      var snap = await Promise.race([fetchPromise, timeoutPromise]);
+      var result = await Promise.race([fetchPromise, timeoutPromise]);
 
-      if(!snap){
-        // Délai dépassé (réseau lent ou bloqué) : on continue avec la banque locale.
+      if(!result || result.error || !result.data){
         ALL_QUESTIONS = local;
         return;
       }
 
-      var remote = [];
-      snap.forEach(function(doc){
-        var d = doc.data();
-        if(d && typeof d.text === 'string' && typeof d.mood === 'string'){
-          remote.push({ id: doc.id, text: d.text, mood: d.mood });
-        }
+      var remote = result.data.map(function(row){
+        return { id: row.id, text: row.text, mood: row.mood };
       });
       ALL_QUESTIONS = local.concat(remote);
     }catch(e){
@@ -165,7 +156,7 @@
     return bagIndexes.pop();
   }
 
-  // ---------- Compteur global en temps réel ----------
+  // ---------- Compteur global ----------
   var globalCountEl = document.getElementById('globalCount');
   var displayedCount = null;
 
@@ -201,19 +192,22 @@
     requestAnimationFrame(step);
   }
 
-  function setupGlobalCounter(){
-    if(firebaseReady){
-      try{
-        db.collection('stats').doc('global').onSnapshot(function(doc){
-          var total = (doc.exists && typeof doc.data().totalAnswers === 'number') ? doc.data().totalAnswers : 0;
-          animateCounterTo(total);
-        }, function(){
-          globalCountEl.textContent = '—';
-        });
-      }catch(e){
-        globalCountEl.textContent = '—';
-      }
-    } else {
+  async function setupGlobalCounter(){
+    if(!supabaseReady){ globalCountEl.textContent = '—'; return; }
+    try{
+      var result = await sb.from('stats').select('total_answers').eq('id', 1).single();
+      var total = (result.data && typeof result.data.total_answers === 'number') ? result.data.total_answers : 0;
+      animateCounterTo(total);
+
+      // Mises à jour en direct entre visiteurs connectés en même temps
+      sb.channel('stats-changes')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'stats' }, function(payload){
+          if(payload.new && typeof payload.new.total_answers === 'number'){
+            animateCounterTo(payload.new.total_answers);
+          }
+        })
+        .subscribe();
+    }catch(e){
       globalCountEl.textContent = '—';
     }
   }
@@ -320,10 +314,7 @@
   function registerStreakOnAnswer(){
     var state = getStreakState();
     var today = todayStr();
-    if(state.lastAnswerDate === today){
-      // déjà comptée aujourd'hui, rien à faire
-      return;
-    }
+    if(state.lastAnswerDate === today){ return; }
     if(state.lastAnswerDate === yesterdayStr()){
       state.streak = (state.streak || 0) + 1;
     } else {
@@ -484,7 +475,7 @@
 
     stopCountdown();
 
-    if(!firebaseReady){
+    if(!supabaseReady){
       matchResult.innerHTML = "Le partage anonyme n'est pas encore activé sur ce site (configuration en attente).";
       matchResult.classList.add('show');
       return;
@@ -506,25 +497,18 @@
     var thisQuestionText = currentQuestionText;
 
     try{
-      var col = db.collection('answers');
-      var snap = await col
-        .where('qId', '==', thisQId)
-        .where('key', '==', key)
-        .get();
+      var existing = await sb.from('answers').select('id').eq('q_id', thisQId).eq('key', key);
+      var matchCount = (existing.data || []).length;
 
-      var matchCount = snap.size;
-
-      await col.add({
-        qId: thisQId,
+      await sb.from('answers').insert({
+        q_id: thisQId,
         question: thisQuestionText,
         key: key,
-        answer: raw.slice(0, 80),
-        ts: firebase.firestore.FieldValue.serverTimestamp()
+        answer: raw.slice(0, 80)
       });
 
-      db.collection('stats').doc('global').set({
-        totalAnswers: firebase.firestore.FieldValue.increment(1)
-      }, { merge: true }).catch(function(){});
+      sb.rpc('increment_stat').then(function(){}).catch(function(){});
+      if(displayedCount !== null){ animateCounterTo(displayedCount + 1); }
 
       registerAnswerSent();
       registerStreakOnAnswer();
@@ -556,17 +540,14 @@
 
   async function loadTopAnswers(qId){
     try{
-      var snap = await db.collection('answers')
-        .where('qId', '==', qId)
-        .limit(200)
-        .get();
+      var result = await sb.from('answers').select('key,answer').eq('q_id', qId).limit(200);
+      var rows = result.data || [];
 
       var freq = {};
-      snap.forEach(function(doc){
-        var d = doc.data();
-        if(!d.key) return;
-        if(!freq[d.key]){ freq[d.key] = { count: 0, sample: d.answer || d.key }; }
-        freq[d.key].count++;
+      rows.forEach(function(row){
+        if(!row.key) return;
+        if(!freq[row.key]){ freq[row.key] = { count: 0, sample: row.answer || row.key }; }
+        freq[row.key].count++;
       });
 
       var ranked = Object.keys(freq).map(function(k){
@@ -629,7 +610,7 @@
     var ctx = canvas.getContext('2d');
 
     var grad = ctx.createRadialGradient(W*0.2, H*0.15, 50, W*0.5, H*0.5, W*0.8);
-    grad.addColorStop(0, '#2A2049');
+    grad.addColorStop(0, '#1E2E35');
     grad.addColorStop(1, '#16232A');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
@@ -649,7 +630,7 @@
     ctx.fillText('QUESTION DU JOUR', W/2, cardY + 56);
 
     ctx.fillStyle = '#F2EDE2';
-    ctx.font = "600 32px 'Fraunces', serif";
+    ctx.font = '700 34px sans-serif';
     ctx.textAlign = 'left';
     var qHeight = wrapText(ctx, question, cardX + 40, cardY + 120, cardW - 80, 44);
 
@@ -667,7 +648,7 @@
     ctx.font = '600 16px monospace';
     ctx.fillText('MA RÉPONSE', cardX + 40, dividerY + 40);
     ctx.fillStyle = '#E08668';
-    ctx.font = "600 28px 'Fraunces', serif";
+    ctx.font = '700 30px sans-serif';
     wrapText(ctx, answer, cardX + 40, dividerY + 82, cardW - 80, 38);
 
     ctx.fillStyle = '#9FB3B4';
@@ -705,10 +686,7 @@
 
       if(navigator.canShare && navigator.canShare({ files: [new File([blob], 'mon-quotidien.png', { type: 'image/png' })] })){
         var file = new File([blob], 'mon-quotidien.png', { type: 'image/png' });
-        await navigator.share({
-          files: [file],
-          text: shareText
-        });
+        await navigator.share({ files: [file], text: shareText });
       } else if(navigator.share){
         await navigator.share({ text: shareText, url: window.location.href });
       } else {
@@ -720,11 +698,10 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-
         try{ await navigator.clipboard.writeText(shareText); }catch(e){}
       }
     }catch(e){
-      // L'utilisateur a peut-être annulé le partage natif : pas d'erreur à afficher
+      // annulation du partage natif : rien à afficher
     } finally {
       if(shareBtn){ shareBtn.disabled = false; shareBtn.textContent = 'Partager ma réponse'; }
     }
@@ -732,8 +709,6 @@
 
   // ---------- Initialisation ----------
   async function init(){
-    // Les boutons sont activés tout de suite, indépendamment du chargement
-    // des questions, pour que l'interface ne reste jamais bloquée.
     drawBtn.addEventListener('click', function(){ drawQuestion(); });
     sendBtn.addEventListener('click', sendAnswer);
     answerInput.addEventListener('keydown', function(e){
@@ -745,10 +720,7 @@
     }catch(e){
       ALL_QUESTIONS = buildLocalQuestions();
     }
-
-    if(ALL_QUESTIONS.length === 0){
-      ALL_QUESTIONS = buildLocalQuestions();
-    }
+    if(ALL_QUESTIONS.length === 0){ ALL_QUESTIONS = buildLocalQuestions(); }
 
     renderMoodChips();
     setupGlobalCounter();
