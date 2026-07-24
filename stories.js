@@ -117,6 +117,8 @@
     var themeRow = document.getElementById('themeRow');
     var storiesEmpty = document.getElementById('storiesEmpty');
     var currentTheme = 'toutes';
+    var storyCardRefs = {}; // id -> { coeur: <span>, main: <span>, etoile: <span> }
+    var realtimeStarted = false;
 
     function renderThemeChips(){
       themeRow.innerHTML = '';
@@ -144,12 +146,29 @@
       loadStoriesFeed();
     }
 
+    function startRealtimeReactions(){
+      if(realtimeStarted || !supabaseReady) return;
+      realtimeStarted = true;
+      sb.channel('stories-reactions')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'stories' }, function(payload){
+          var row = payload.new;
+          if(!row || !row.id || !row.reactions) return;
+          var refs = storyCardRefs[row.id];
+          if(!refs) return; // histoire pas affichée dans le filtre actuel
+          Object.keys(row.reactions).forEach(function(key){
+            if(refs[key]){ refs[key].textContent = row.reactions[key]; }
+          });
+        })
+        .subscribe();
+    }
+
     async function loadStoriesFeed(){
       if(!supabaseReady){
         storiesEmpty.style.display = '';
         storiesEmpty.textContent = "Le fil n'est pas encore disponible.";
         return;
       }
+      storyCardRefs = {};
       storiesFeed.innerHTML = '';
       storiesFeed.appendChild(storiesEmpty);
       storiesEmpty.style.display = '';
@@ -173,6 +192,7 @@
         rows.forEach(function(row){
           renderStoryCard(row.id, row);
         });
+        startRealtimeReactions();
       }catch(e){
         storiesEmpty.textContent = "Le fil n'a pas pu être chargé.";
       }
@@ -194,6 +214,7 @@
 
       var reactionsRow = document.createElement('div');
       reactionsRow.className = 'story-reactions';
+      storyCardRefs[id] = {};
 
       REACTIONS.forEach(function(r){
         var btn = document.createElement('button');
@@ -203,20 +224,18 @@
         countSpan.className = 'count';
         var initialCount = (data.reactions && data.reactions[r.id]) ? data.reactions[r.id] : 0;
         countSpan.textContent = initialCount;
+        storyCardRefs[id][r.id] = countSpan;
         btn.appendChild(document.createTextNode(r.emoji + ' '));
         btn.appendChild(countSpan);
         btn.title = r.label;
 
         btn.addEventListener('click', function(){
           btn.disabled = true;
+          countSpan.textContent = (parseInt(countSpan.textContent, 10) || 0) + 1; // retour instantané
           sb.rpc('increment_reaction', { story_id: id, reaction_key: r.id })
-            .then(function(result){
-              if(!result.error){
-                countSpan.textContent = (parseInt(countSpan.textContent, 10) || 0) + 1;
-              }
-            })
             .catch(function(){})
             .finally(function(){ btn.disabled = false; });
+          // La valeur finale/confirmée arrive ensuite via Realtime pour tout le monde, y compris toi.
         });
 
         reactionsRow.appendChild(btn);
