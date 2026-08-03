@@ -1,13 +1,13 @@
 :root{
-  --bg:#14101C;
-  --card:#1E1729;
-  --card-edge:#2E2438;
-  --violet:#8B7BD8;
-  --violet-dim:#6F5FBD;
-  --pink:#E893C2;
-  --mint:#7ED9B8;
-  --ink:#F2EEF7;
-  --ink-dim:#9C90AE;
+  --bg:#231810;
+  --card:#2E2118;
+  --card-edge:#40301F;
+  --violet:#C9694A;
+  --violet-dim:#A8543A;
+  --pink:#D9A544;
+  --mint:#5C9483;
+  --ink:#F5EBDD;
+  --ink-dim:#B9A692;
 }
 *{box-sizing:border-box;}
 html{ background:var(--bg); }
@@ -33,7 +33,7 @@ a{ color:inherit; }
   border-bottom:1px solid var(--card-edge);
   position:sticky;
   top:0;
-  background:rgba(20,16,28,.92);
+  background:rgba(35,24,16,.92);
   backdrop-filter:blur(8px);
   z-index:50;
 }
@@ -124,8 +124,8 @@ h2{
   transition:transform .12s ease, background .15s ease;
 }
 .btn:active{ transform:scale(.97); }
-.btn-primary{ background:var(--pink); color:#2B0F1F; }
-.btn-primary:hover{ background:#F0A8CF; }
+.btn-primary{ background:var(--pink); color:#2E1B06; }
+.btn-primary:hover{ background:#EFBD68; }
 .btn-outline{ background:transparent; border:1px solid var(--card-edge); color:var(--ink); }
 .btn-outline:hover{ border-color:var(--violet); }
 
@@ -195,7 +195,7 @@ h2{
   transition:background .15s ease, color .15s ease, border-color .15s ease;
 }
 .theme-chip:hover{ border-color:var(--violet-dim); }
-.theme-chip.active{ background:var(--violet); color:#170F2B; border-color:var(--violet); }
+.theme-chip.active{ background:var(--violet); color:#2E1409; border-color:var(--violet); }
 
 /* ---------- Cartes d'histoires ---------- */
 .stories-feed{
